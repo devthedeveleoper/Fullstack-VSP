@@ -5,6 +5,9 @@ import Video from "@/models/Video";
 import Comment from "@/models/Comment";
 import { buildVideoAggregation } from "@/lib/videoUtils";
 import { verifyJwt } from "@/lib/authUtils";
+import axios from 'axios';
+
+const AURA_API_BASE_URL = "https://api.aurahub.fun";
 
 export async function GET(request, { params }) {
   await dbConnect();
@@ -74,31 +77,31 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  await dbConnect();
-  try {
-    const user = verifyJwt(request);
-    if (!user)
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    await dbConnect();
+    try {
+        const user = verifyJwt(request);
+        if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const video = await Video.findById(params.id);
-    if (!video)
-      return NextResponse.json({ message: "Video not found" }, { status: 404 });
+        const video = await Video.findById(params.id);
+        if (!video) return NextResponse.json({ message: 'Video not found' }, { status: 404 });
+        
+        if (video.uploader.toString() !== user.id) {
+            return NextResponse.json({ message: 'User not authorized to delete this video' }, { status: 403 });
+        }
 
-    if (video.uploader.toString() !== user.id) {
-      return NextResponse.json(
-        { message: "User not authorized to delete this video" },
-        { status: 403 }
-      );
+        try {
+            await axios.delete(`${AURA_API_BASE_URL}/fs/files/delete/${video.fileId}`);
+            console.log(`Successfully deleted file ${video.fileId} from AuraHub.`);
+        } catch (auraError) {
+            console.error(`Failed to delete file ${video.fileId} from AuraHub:`, auraError.message);
+        }
+        await Video.deleteOne({ _id: params.id });
+
+        await Comment.deleteMany({ video: params.id });
+
+        return NextResponse.json({ message: 'Video deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting video:", error);
+        return NextResponse.json({ message: 'Server error while deleting video' }, { status: 500 });
     }
-
-    await Video.deleteOne({ _id: params.id });
-    await Comment.deleteMany({ video: params.id });
-    return NextResponse.json({ message: "Video deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting video:", error);
-    return NextResponse.json(
-      { message: "Server error while deleting video" },
-      { status: 500 }
-    );
-  }
 }
