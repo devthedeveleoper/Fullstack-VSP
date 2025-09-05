@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { useRouter, useSearchParams } from 'next/navigation';
 import API from '@/lib/api';
 import VideoCard from '@/components/VideoCard';
 import VideoCardSkeleton from '@/components/VideoCardSkeleton';
@@ -9,6 +10,9 @@ import useSearchStore from '@/stores/searchStore';
 import CATEGORIES from '@/constants/categories';
 
 const HomePage = () => {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -16,7 +20,8 @@ const HomePage = () => {
     const [sortBy, setSortBy] = useState('date_desc');
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
-    const [activeCategory, setActiveCategory] = useState("All");
+    
+    const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || "All");
 
     const searchTerm = useSearchStore((state) => state.searchTerm);
     const { ref, inView } = useInView({ threshold: 0.5 });
@@ -68,17 +73,30 @@ const HomePage = () => {
         }
     }, [inView, hasMore, loadingMore, page, sortBy, activeCategory, searchTerm, fetchVideos]);
 
+    const handleCategoryClick = (category) => {
+        const newCategory = activeCategory === category ? "All" : category;
+        setActiveCategory(newCategory);
+
+        const params = new URLSearchParams(window.location.search);
+        if (newCategory !== "All") {
+            params.set('category', newCategory);
+        } else {
+            params.delete('category');
+        }
+        router.push(`/?${params.toString()}`);
+    };
+
     const pageTitle = searchTerm ? `Results for "${searchTerm}"` : 'Trending Videos';
 
     return (
-        <main className="container mx-auto px-6 py-8">
+        <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
             {!searchTerm && (
-                 <div className="mb-8 flex items-center gap-2 overflow-x-auto pb-2">
+                 <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2">
                     {CATEGORIES.map(cat => (
                         <button 
                             key={cat}
-                            onClick={() => setActiveCategory(cat)}
-                            className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-colors ${
+                            onClick={() => handleCategoryClick(cat)}
+                            className={`px-4 py-2 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap transition-colors ${
                                 activeCategory === cat 
                                 ? 'bg-blue-600 text-white' 
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -90,15 +108,17 @@ const HomePage = () => {
                 </div>
             )}
 
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">{pageTitle}</h2>
-                <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 self-start sm:self-center">
+                    {pageTitle}
+                </h2>
+                <div className="flex items-center space-x-2 self-end sm:self-center">
                     <label htmlFor="sort" className="text-sm font-medium text-gray-700">Sort by:</label>
                     <select 
                         id="sort"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2"
+                        className="bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-8 py-2 text-sm"
                     >
                         <option value="date_desc">Newest</option>
                         <option value="views_desc">Most Views</option>
@@ -111,7 +131,7 @@ const HomePage = () => {
 
             {error && <p className="text-center text-red-500">{error}</p>}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {loading
                   ? Array.from({ length: 8 }).map((_, index) => <VideoCardSkeleton key={index} />)
                   : (
