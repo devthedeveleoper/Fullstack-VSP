@@ -20,12 +20,18 @@ export async function POST(request) {
     const description = formData.get("description");
     const videoId = formData.get("videoId");
     const thumbnailFile = formData.get("thumbnailFile");
+    const category = formData.get('category');
+    const tagsString = formData.get('tags');
+
+    const tags = tagsString ? JSON.parse(tagsString) : [];
 
     const videoData = {
       title,
       description,
       fileId: videoId,
       uploader: user.id,
+      category: category,
+      tags: tags,
     };
 
     if (thumbnailFile) {

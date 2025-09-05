@@ -19,6 +19,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    subscribers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    subscriptions: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
   },
   { timestamps: true }
 );

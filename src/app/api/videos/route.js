@@ -10,6 +10,7 @@ export async function GET(request) {
     const sortOption = searchParams.get("sort") || "date_desc";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
+    const category = searchParams.get('category');
     const skip = (page - 1) * limit;
 
     const sortCriteria = {
@@ -19,9 +20,13 @@ export async function GET(request) {
       comments_desc: { commentCount: -1 },
     }[sortOption] || { createdAt: -1 };
 
-    const totalVideos = await Video.countDocuments();
+    const filter = {};
+        if (category && category !== "All") {
+            filter.category = category;
+        }
 
-    const aggregation = buildVideoAggregation({}, sortCriteria);
+    const totalVideos = await Video.countDocuments(filter);
+    const aggregation = buildVideoAggregation(filter, sortCriteria);
 
     aggregation.push({ $skip: skip });
     aggregation.push({ $limit: limit });

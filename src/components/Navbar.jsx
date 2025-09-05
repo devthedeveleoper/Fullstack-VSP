@@ -50,6 +50,7 @@ const Navbar = () => {
             </div>
             {isAuthenticated ? (
               <>
+                <Link href="/subscriptions" className="font-semibold text-gray-600 hover:text-blue-600">Subscriptions</Link>
                 <Link
                   href="/upload"
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold whitespace-nowrap"

@@ -3,12 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import API from '@/lib/api';
+import useAuthStore from '@/stores/authStore';
+import { toast } from 'react-toastify';
 import VideoCard from '@/components/VideoCard';
 import VideoCardSkeleton from '@/components/VideoCardSkeleton';
 
 const ProfilePage = () => {
     const params = useParams();
     const username = params.username;
+    const { user: currentUser, isAuthenticated } = useAuthStore();
     
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -32,38 +35,83 @@ const ProfilePage = () => {
         fetchProfile();
     }, [username]);
 
-    if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
+    const handleSubscribe = async () => {
+        if (!isAuthenticated) {
+            toast.warn("Please log in to subscribe.");
+            return;
+        }
+
+        const originalProfile = profile;
+        const newIsSubscribed = !profile.user.isSubscribed;
+        const newSubscriberCount = newIsSubscribed
+            ? profile.user.subscriberCount + 1
+            : profile.user.subscriberCount - 1;
+
+        setProfile(prev => ({
+            ...prev,
+            user: { ...prev.user, isSubscribed: newIsSubscribed, subscriberCount: newSubscriberCount }
+        }));
+
+        try {
+            await API.post(`/users/${profile.user.id}/subscribe`);
+        } catch (error) {
+            toast.error("An error occurred. Please try again.");
+            setProfile(originalProfile);
+        }
+    };
+
+    if (error) {
+        return <div className="text-center p-10 text-red-500 font-semibold">{error}</div>;
+    }
+
+    if (loading || !profile) {
+        return (
+             <main className="container mx-auto px-6 py-8 animate-pulse">
+                <div className="mb-8">
+                    <div className="h-10 bg-gray-300 rounded w-1/3 mb-4"></div>
+                    <div className="h-6 bg-gray-300 rounded w-1/4"></div>
+                </div>
+                <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {Array.from({ length: 4 }).map((_, index) => <VideoCardSkeleton key={index} />)}
+                </div>
+            </main>
+        );
+    }
+    
+    const isOwnProfile = currentUser?.id === profile.user.id;
 
     return (
         <main className="container mx-auto px-6 py-8">
-            {loading ? (
-                <div className="animate-pulse">
-                    <div className="h-10 bg-gray-300 rounded w-1/3 mb-4"></div>
-                    <div className="h-6 bg-gray-300 rounded w-1/4 mb-8"></div>
-                </div>
-            ) : profile && (
-                <div className="mb-8">
+            <div className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
                     <h1 className="text-4xl font-bold text-gray-800">{profile.user.username}</h1>
                     <p className="text-gray-600 mt-2">
-                        Joined on {new Date(profile.user.joined).toLocaleDateString()} • {profile.videos.length} videos
+                        {profile.user.subscriberCount} subscribers • {profile.videos.length} videos • Joined on {new Date(profile.user.joined).toLocaleDateString()}
                     </p>
                 </div>
-            )}
+                {!isOwnProfile && isAuthenticated && (
+                    <button
+                        onClick={handleSubscribe}
+                        className={`px-6 py-2 font-semibold rounded-full transition-colors ${
+                            profile.user.isSubscribed
+                                ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                : 'bg-black text-white hover:bg-gray-800'
+                        }`}
+                    >
+                        {profile.user.isSubscribed ? 'Subscribed' : 'Subscribe'}
+                    </button>
+                )}
+            </div>
             
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Uploads</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-t pt-6">Uploads</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {loading ? (
-                    Array.from({ length: 4 }).map((_, index) => (
-                        <VideoCardSkeleton key={index} />
+                {profile.videos.length > 0 ? (
+                    profile.videos.map(video => (
+                        <VideoCard key={video._id} video={video} />
                     ))
                 ) : (
-                    profile?.videos.length > 0 ? (
-                        profile.videos.map(video => (
-                            <VideoCard key={video._id} video={video} />
-                        ))
-                    ) : (
-                        <p className="col-span-full text-center text-gray-600">This user hasn't uploaded any videos yet.</p>
-                    )
+                    <p className="col-span-full text-center text-gray-600">This user hasn't uploaded any videos yet.</p>
                 )}
             </div>
         </main>

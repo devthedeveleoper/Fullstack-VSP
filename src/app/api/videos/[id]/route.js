@@ -50,7 +50,8 @@ export async function PUT(request, { params }) {
     if (!user)
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const video = await Video.findById(params.id);
+    const { id } = await params;
+    const video = await Video.findById(id);
     if (!video)
       return NextResponse.json({ message: "Video not found" }, { status: 404 });
 

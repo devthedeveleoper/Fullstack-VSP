@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import API from "@/lib/api";
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import CATEGORIES from "@/constants/categories";
+
 
 const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -28,6 +30,8 @@ const formatTime = (seconds) => {
 const UploadForm = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Other");
+  const [tags, setTags] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const thumbnailRef = useRef(null);
   const videoFileRef = useRef(null);
@@ -50,6 +54,9 @@ const UploadForm = () => {
     finalFormData.append("title", title);
     finalFormData.append("description", description);
     finalFormData.append("videoId", videoId);
+    finalFormData.append("category", category);
+    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    finalFormData.append("tags", JSON.stringify(tagsArray));
 
     const thumbnailFile = thumbnailRef.current?.files?.[0];
     if (thumbnailFile) {
@@ -144,7 +151,7 @@ const UploadForm = () => {
                 params: { id: remoteId }
             });
 
-            failedAttempts = 0; // Reset counter on success
+            failedAttempts = 0;
             const statusData = statusResponse.data[remoteId];
 
             if (statusData && statusData.status === "finished") {
@@ -224,6 +231,33 @@ const UploadForm = () => {
             <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <input id="title" type="text" placeholder="My Awesome Video" value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"/>
+            </div>
+
+            <div>
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <input 
+                    id="tags" 
+                    type="text"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="e.g., gaming, react, tutorial"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Separate tags with a comma.</p>
+            </div>
+
+            <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select 
+                    id="category" 
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                >
+                    {CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                </select>
             </div>
 
             <div>

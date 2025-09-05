@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import CATEGORIES from "@/constants/categories";
 
 const videoSchema = new mongoose.Schema(
   {
@@ -25,6 +26,15 @@ const videoSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    category: {
+        type: String,
+        enum: CATEGORIES,
+        default: "Other",
+    },
+    tags: {
+        type: [String], 
+        default: [],
+    },
     views: {
       type: Number,
       default: 0,
@@ -39,7 +49,12 @@ const videoSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-videoSchema.index({ title: "text", description: "text" });
+videoSchema.index({ 
+    title: 'text', 
+    description: 'text', 
+    category: 'text', 
+    tags: 'text' 
+});
 
 const Video = mongoose.models.Video || mongoose.model("Video", videoSchema);
 
