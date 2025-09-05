@@ -116,6 +116,7 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <>
                   <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="w-full text-left py-2 px-2 text-gray-800 font-semibold rounded-md hover:bg-gray-100">Dashboard</Link>
+                  <Link href="/my-playlists" className="font-semibold text-gray-600 hover:text-blue-600">My Playlists</Link>
                   <Link href="/subscriptions" onClick={() => setIsMenuOpen(false)} className="w-full text-left py-2 px-2 text-gray-800 font-semibold rounded-md hover:bg-gray-100">Subscriptions</Link>
                   <Link href="/upload" onClick={() => setIsMenuOpen(false)} className="w-full text-left py-2 px-2 text-gray-800 font-semibold rounded-md hover:bg-gray-100">Upload</Link>
                   <button onClick={handleLogout} className="w-full text-left py-2 px-2 text-gray-800 font-semibold rounded-md hover:bg-gray-100">Logout</button>

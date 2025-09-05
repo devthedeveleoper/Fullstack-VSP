@@ -12,6 +12,7 @@ import SuggestedVideoCard from "@/components/SuggestedVideoCard";
 import EditVideoModal from "@/components/EditVideoModal";
 import VideoPlayerSkeleton from "@/components/VideoPlayerSkeleton";
 import Comment from "@/components/Comment";
+import SaveToPlaylistModal from "@/components/SaveToPlaylistModal";
 import { useInView } from 'react-intersection-observer';
 
 const VideoPlayerPage = () => {
@@ -26,6 +27,7 @@ const VideoPlayerPage = () => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const [suggestedVideos, setSuggestedVideos] = useState([]);
   const [suggestionPage, setSuggestionPage] = useState(1);
@@ -173,6 +175,7 @@ const VideoPlayerPage = () => {
   return (
     <>
       {showEditModal && <EditVideoModal video={video} onSave={handleSaveEdits} onCancel={() => setShowEditModal(false)} />}
+      {showSaveModal && <SaveToPlaylistModal videoId={id} onClose={() => setShowSaveModal(false)} />}
       
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
@@ -194,15 +197,23 @@ const VideoPlayerPage = () => {
                 <span className="mx-2">•</span>
                 <span>{new Date(video.createdAt).toLocaleDateString()}</span>
               </div>
-              <button
-                onClick={throttledLikeHandler}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-colors ${
-                  video.isLiked ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                }`}
-              >
-                <FcLike />
-                <span>{video.likesCount}</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={throttledLikeHandler}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-colors ${
+                    video.isLiked ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  }`}
+                >
+                  <FcLike />
+                  <span>{video.likesCount}</span>
+                </button>
+                {isAuthenticated && (
+                    <button onClick={() => setShowSaveModal(true)} className="flex items-center space-x-2 px-4 py-2 rounded-full font-semibold bg-gray-200 text-gray-800 hover:bg-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                        <span>Save</span>
+                    </button>
+                )}
+              </div>
             </div>
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between items-center">
