@@ -1,7 +1,6 @@
 import React, { Suspense } from 'react';
-import HomePageClient from '@/components/HomePageClient'; // Import the component we just made
+import HomePageClient from '@/components/HomePageClient';
 
-// A simple fallback component to show while the dynamic component is loading
 const HomePageLoading = () => {
     return <div className="text-center p-10">Loading videos...</div>;
 };

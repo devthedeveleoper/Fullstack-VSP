@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import API from '@/lib/api';
 import VideoCard from '@/components/VideoCard';
 import VideoCardSkeleton from '@/components/VideoCardSkeleton';
-import useSearchStore from '@/stores/searchStore';
 import CATEGORIES from '@/constants/categories';
 
 const HomePageClient = () => {
@@ -23,10 +22,9 @@ const HomePageClient = () => {
     
     const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || "All");
 
-    const searchTerm = useSearchStore((state) => state.searchTerm);
     const { ref, inView } = useInView({ threshold: 0.5 });
 
-    const fetchVideos = useCallback(async (currentPage, currentSortBy, category, currentSearchTerm) => {
+    const fetchVideos = useCallback(async (currentPage, currentSortBy, category) => {
         if (currentPage === 1) {
             setLoading(true);
         } else {
@@ -35,21 +33,13 @@ const HomePageClient = () => {
 
         try {
             const params = { sort: currentSortBy, page: currentPage, limit: 12 };
-            let response;
-            
-            if (currentSearchTerm.trim() !== '') {
-                params.q = currentSearchTerm;
-                response = await API.get('/videos/search', { params });
-                setVideos(response.data.results || response.data);
-                setHasMore(response.data.currentPage < response.data.totalPages);
-            } else {
-                if (category !== "All") {
-                    params.category = category;
-                }
-                response = await API.get('/videos', { params });
-                setVideos(prev => currentPage === 1 ? response.data.videos : [...prev, ...response.data.videos]);
-                setHasMore(response.data.currentPage < response.data.totalPages);
+            if (category !== "All") {
+                params.category = category;
             }
+            const response = await API.get('/videos', { params });
+            
+            setVideos(prev => currentPage === 1 ? response.data.videos : [...prev, ...response.data.videos]);
+            setHasMore(response.data.currentPage < response.data.totalPages);
             setError('');
         } catch (err) {
             setError('Could not fetch videos.');
@@ -60,18 +50,20 @@ const HomePageClient = () => {
         }
     }, []);
 
+    // Effect for initial load and when sort/category changes
     useEffect(() => {
         setPage(1);
-        fetchVideos(1, sortBy, activeCategory, searchTerm);
-    }, [sortBy, activeCategory, searchTerm, fetchVideos]);
+        fetchVideos(1, sortBy, activeCategory);
+    }, [sortBy, activeCategory, fetchVideos]);
 
+    // Effect for infinite scroll
     useEffect(() => {
         if (inView && hasMore && !loadingMore) {
             const nextPage = page + 1;
             setPage(nextPage);
-            fetchVideos(nextPage, sortBy, activeCategory, searchTerm);
+            fetchVideos(nextPage, sortBy, activeCategory);
         }
-    }, [inView, hasMore, loadingMore, page, sortBy, activeCategory, searchTerm, fetchVideos]);
+    }, [inView, hasMore, loadingMore, page, sortBy, activeCategory, fetchVideos]);
 
     const handleCategoryClick = (category) => {
         const newCategory = activeCategory === category ? "All" : category;
@@ -86,31 +78,27 @@ const HomePageClient = () => {
         router.push(`/?${params.toString()}`);
     };
 
-    const pageTitle = searchTerm ? `Results for "${searchTerm}"` : 'Trending Videos';
-
     return (
         <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            {!searchTerm && (
-                 <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2">
-                    {CATEGORIES.map(cat => (
-                        <button 
-                            key={cat}
-                            onClick={() => handleCategoryClick(cat)}
-                            className={`px-4 py-2 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-                                activeCategory === cat 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-            )}
+            <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2">
+                {CATEGORIES.map(cat => (
+                    <button 
+                        key={cat}
+                        onClick={() => handleCategoryClick(cat)}
+                        className={`px-4 py-2 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+                            activeCategory === cat 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        {cat}
+                    </button>
+                ))}
+            </div>
 
             <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 self-start sm:self-center">
-                    {pageTitle}
+                    Trending Videos
                 </h2>
                 <div className="flex items-center space-x-2 self-end sm:self-center">
                     <label htmlFor="sort" className="text-sm font-medium text-gray-700">Sort by:</label>
@@ -124,7 +112,6 @@ const HomePageClient = () => {
                         <option value="views_desc">Most Views</option>
                         <option value="likes_desc">Most Likes</option>
                         <option value="comments_desc">Most Comments</option>
-                        {searchTerm && <option value="relevance">Relevance</option>}
                     </select>
                 </div>
             </div>
@@ -132,15 +119,15 @@ const HomePageClient = () => {
             {error && <p className="text-center text-red-500">{error}</p>}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                {loading
-                  ? Array.from({ length: 8 }).map((_, index) => <VideoCardSkeleton key={index} />)
-                  : (
+                {(loading && page === 1) ? (
+                    Array.from({ length: 12 }).map((_, index) => <VideoCardSkeleton key={index} />)
+                ) : (
                     videos.length > 0 ? (
                         videos.map((video) => <VideoCard key={video._id} video={video} />)
                     ) : (
-                        <p className="col-span-full text-center text-gray-600">No videos found.</p>
+                        <p className="col-span-full text-center text-gray-600">No videos found in this category.</p>
                     )
-                  )}
+                )}
             </div>
 
             <div ref={ref} className="h-10 mt-8">

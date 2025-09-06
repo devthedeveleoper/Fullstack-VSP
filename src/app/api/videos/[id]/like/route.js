@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import { verifyJwt } from "@/lib/authUtils";
 import { Types } from "mongoose";
+import Notification from "@/models/Notification";
 
 export async function POST(request, { params }) {
   await dbConnect();
@@ -33,6 +34,16 @@ export async function POST(request, { params }) {
     }
 
     await video.save();
+
+    if (userIndex === -1 && video.uploader.toString() !== user.id) {
+      await new Notification({
+        recipient: video.uploader,
+        sender: user.id,
+        type: "like",
+        video: video._id,
+      }).save();
+    }
+
     return NextResponse.json({
       likes: video.likes.length,
       isLiked: userIndex === -1,

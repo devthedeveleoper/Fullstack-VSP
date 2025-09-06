@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Comment from '@/models/Comment';
+import Video from '@/models/Video';
+import Notification from '@/models/Notification';
 import { verifyJwt } from '@/lib/authUtils';
 import mongoose from 'mongoose';
 
@@ -36,6 +38,11 @@ export async function POST(request, { params }) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
+        const video = await Video.findById(id);
+        if (!video) {
+            return NextResponse.json({ message: 'Video not found' }, { status: 404 });
+        }
+
         const body = await request.json();
         const { text, parentCommentId } = body; 
 
@@ -51,9 +58,33 @@ export async function POST(request, { params }) {
         });
 
         await newComment.save();
-        const populatedComment = await Comment.findById(newComment._id).populate('author', 'username');
         
+        if (video.uploader.toString() !== user.id) {
+            await new Notification({
+                recipient: video.uploader,
+                sender: user.id,
+                type: parentCommentId ? 'reply' : 'comment',
+                video: video._id,
+                comment: newComment._id
+            }).save();
+        }
+
+        if (parentCommentId) {
+            const parentComment = await Comment.findById(parentCommentId);
+            if (parentComment && parentComment.author.toString() !== user.id && parentComment.author.toString() !== video.uploader.toString()) {
+                 await new Notification({
+                    recipient: parentComment.author,
+                    sender: user.id,
+                    type: 'reply',
+                    video: video._id,
+                    comment: newComment._id
+                }).save();
+            }
+        }
+        
+        const populatedComment = await Comment.findById(newComment._id).populate('author', 'username');
         return NextResponse.json(populatedComment, { status: 201 });
+
     } catch (error) {
         console.error("ERROR POSTING COMMENT:", error);
         return NextResponse.json({ message: 'Server error while posting comment' }, { status: 500 });
